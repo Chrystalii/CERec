@@ -18,19 +18,26 @@ To softly train the CliMF model, you should firstly generate .bat train files by
 ```
 
 Then manually add the file head to the two files as required in  Orange.data.Table(files) function with:
+```
 user	item	relevance
 c	c	c
 row=1	col=1	class
+```
 
 After trained the User and Item embeddings, assign all_embed.data in recommender_agent.py with:
+```
 $ all_embed.data = torch.from_numpy(*your_trained_embedding) 
+```
 
 (2) You can also apply xavier on user/item embeddings to initialize embeddings. To do so, simply use:
+```
 $ nn.init.xavier_uniform_(all_embed) in recommender_agent.py
+```
 
 Step 2. counterfactual reasoning agent
 (1) The configs for training the agent is placed in common/parser. Edit the parser with your preferred auguments. 
 Important args are:
+```
  $ --data_path: Input data path.
  $ --dataset: Choose a dataset.
  $ --emb_size: Embedding size.
@@ -40,9 +47,12 @@ Important args are:
  $ --inter_threshold: interaction threshold to construct interaction matrix.
  $ --interaction_len: Input vector length of user embedding.
  $ --k_step: k step from current positive items
+ ```
  
 (2) After configuring the parser, train the agent with:
+ ```
  $ python train_RL_agent.py
+ ```
  
 (3) You can get the trained sampler and recommender models saved in ./weights/.
 
@@ -50,14 +60,20 @@ Step 3. generate counterfactual aspect-level explanations:
 (0) load_state_dict from the trained sampler and recommender models from step 2 by replacing the paths in line 195 and line 198 of generate_explanation.py
 
 (1) run: 
+```
 $ python generate_explanation.py
 output: .txt files of counterfactual_examples_{dataset}.txt and counterfactual_attributes_{dataset}.txt, which are placed in ./explanations/
+```
 
 (2) We also provide the user-side evaluation of the output counterfactual attributes.
 To evaluate, you should firstly extract ground-truth negative atrributes of user-item interactions from SOTA models (e.g., we provide an example negative attibutes in GT_attributes/, which is extracted from KGpolicy).
 Then replace the ground_truth_path in user_side_evaluation.py with your trained ground truth attribute file
 Finally, run:
+```
 $ python user_side_evaluation 
-
+```
 
 Cite information:
+```
+Balabala
+```
