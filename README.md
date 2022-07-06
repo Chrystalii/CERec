@@ -7,7 +7,7 @@
 Black-box recommendation model
 We provide two options for training the black-box recommendation model:
 (1) Use arbitrary model that can produce the User and Item embeddings; 
-you should firstly place it into BaseRecRepo-> to generate User and item embedding.
+you should firstly place it into BaseRecRepo, to generate User and item embedding.
 
 We provide an example: CliMF in the BaseRecRepo.
 The CliMF directly optimizes the Top-$K$ recommendation by modeling parameters through maximizing the Mean Reciprocal Rank (MRR), which is a well-known information retrieval metric for capturing the performance of top-k recommendations.
