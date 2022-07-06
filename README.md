@@ -78,5 +78,5 @@ $ python user_side_evaluation
 
 Cite information:
 ```
-Balabala
+will be released after paper acceptance
 ```
