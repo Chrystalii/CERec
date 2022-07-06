@@ -1,9 +1,10 @@
-Our code contains three important steps: 
+## Our code contains three important steps: 
 1. Train black-box recommendation model; 
 2. Train counterfactual reasoning agent; 
 3. Genetrate counterfactual explanations. 
 
-Step 1: black-box recommendation model
+## Step 1:
+Black-box recommendation model
 We provide two options for training the black-box recommendation model:
 (1) Use arbitrary model that can produce the User and Item embeddings; 
 you should firstly place it into BaseRecRepo-> to generate User and item embedding.
@@ -34,7 +35,8 @@ $ all_embed.data = torch.from_numpy(*your_trained_embedding)
 $ nn.init.xavier_uniform_(all_embed) in recommender_agent.py
 ```
 
-Step 2. counterfactual reasoning agent
+## Step 2.
+Counterfactual reasoning agent
 (1) The configs for training the agent is placed in common/parser. Edit the parser with your preferred auguments. 
 Important args are:
 ```
@@ -56,7 +58,8 @@ Important args are:
  
 (3) You can get the trained sampler and recommender models saved in ./weights/.
 
-Step 3. generate counterfactual aspect-level explanations:
+## Step 3
+Generate counterfactual aspect-level explanations:
 (0) load_state_dict from the trained sampler and recommender models from step 2 by replacing the paths in line 195 and line 198 of generate_explanation.py
 
 (1) run: 
