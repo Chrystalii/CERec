@@ -12,8 +12,10 @@ We provide an example: CliMF in the BaseRecRepo.
 The CliMF directly optimizes the Top-$K$ recommendation by modeling parameters through maximizing the Mean Reciprocal Rank (MRR), which is a well-known information retrieval metric for capturing the performance of top-k recommendations.
 
 To softly train the CliMF model, you should firstly generate .bat train files by
--> convert_file(train_file_path, CF.train_user_dict)
+```
+convert_file(train_file_path, CF.train_user_dict)
 -> convert_file(test_file_path, CF.test_user_dict)
+```
 
 Then manually add the file head to the two files as required in  Orange.data.Table(files) function with:
 user	item	relevance
