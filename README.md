@@ -13,7 +13,7 @@ The CliMF directly optimizes the Top-$K$ recommendation by modeling parameters t
 
 To softly train the CliMF model, you should firstly generate .bat train files by
 ```
-convert_file(train_file_path, CF.train_user_dict)
+-> convert_file(train_file_path, CF.train_user_dict)
 -> convert_file(test_file_path, CF.test_user_dict)
 ```
 
