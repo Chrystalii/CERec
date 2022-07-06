@@ -35,7 +35,7 @@ $ all_embed.data = torch.from_numpy(*your_trained_embedding)
 $ nn.init.xavier_uniform_(all_embed) in recommender_agent.py
 ```
 
-## Step 2.
+## Step 2:
 Counterfactual reasoning agent
 (1) The configs for training the agent is placed in common/parser. Edit the parser with your preferred auguments. 
 Important args are:
@@ -58,7 +58,7 @@ Important args are:
  
 (3) You can get the trained sampler and recommender models saved in ./weights/.
 
-## Step 3
+## Step 3:
 Generate counterfactual aspect-level explanations:
 (0) load_state_dict from the trained sampler and recommender models from step 2 by replacing the paths in line 195 and line 198 of generate_explanation.py
 
