@@ -2,16 +2,16 @@
 ## Getting Started
 
 Our code contains three important steps: 
-1. Pretrain train recommendation model (optional); 
+1. Pretrain recommendation model (optional); 
 2. Train counterfactual reasoning agent; 
-3. Genetrate counterfactual explanations.
+3. Generate counterfactual explanations.
 
 ### Step 1: Pretraining black-box recommendation model (optional)
 
 We provide an example: CliMF in the BaseRecRepo, for training the black-box recommendation model:
 The CliMF directly optimizes the Top-$K$ recommendation by modeling parameters through maximizing the Mean Reciprocal Rank (MRR).
 
-1. To train the CliMF model, you should firstly generate .bat train files by
+1. To train the CliMF model, you should first generate .bat train files by
     ```
    convert_file(train_file_path, CF.train_user_dict)
 
@@ -23,7 +23,7 @@ The CliMF directly optimizes the Top-$K$ recommendation by modeling parameters t
    c  c  c
    row=1 col=1 class
   ```
-3. Train CliMF and save recommendation model paratemters:
+3. Train CliMF and save recommendation model parameters:
   ```
    python train_base_rec.py 
   ```
@@ -31,7 +31,7 @@ The CliMF directly optimizes the Top-$K$ recommendation by modeling parameters t
   ```
    all_embed.data = torch.from_numpy(*your_trained_embedding_file) 
   ```
-if you do not wish to use pretaining models, apply xavier on user/item embeddings to initialize embeddings. To do so, simply use:
+If you do not wish to use pertaining models, apply Xavier on user/item embeddings to initialize embeddings. To do so, simply use:
   ```
    nn.init.xavier_uniform_(all_embed) in recommender_agent.py 
   ```
@@ -39,7 +39,7 @@ if you do not wish to use pretaining models, apply xavier on user/item embedding
 ### Step 2. Counterfactual reasoning agent (mandatory)
 
 1. Edit the configs for training RL agent:
-Parser file is placed in common/parser; Important args are:
+The parser file is placed in common/parser; Important args are:
   ```
   --data_path: Input data path.
   --dataset: Choose a dataset.
@@ -54,7 +54,7 @@ Parser file is placed in common/parser; Important args are:
 2. We also provide alternatives for variants; you may choose different graph learning methods, samplers, recommendation models and reward functions by:
   ```
     #Graph Learning Module
-    --GCN: GCN reprsentation learning operator, options are [SAGE, GCN, GNN, SG, LG, GAT, Trans]
+    --GCN: GCN representation learning operator, options are [SAGE, GCN, GNN, SG, LG, GAT, Trans]
 
     #Agent
     --reward: reward function, options are [all, R-reward, S-reward]
@@ -80,7 +80,7 @@ Parser file is placed in common/parser; Important args are:
     ```
   ```
   ```
-output: .txt files of counterfactual_examples_{dataset}.txt; and counterfactual_attributes_{dataset}.txt, which are placed in ./explanations/
+The output: .txt files of counterfactual_examples_{dataset}.txt; and counterfactual_attributes_{dataset}.txt, which are placed in ./explanations/
   ```
 
 ### Cite information:
