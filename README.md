@@ -25,7 +25,7 @@ c	c	c
 row=1	col=1	class
 ```
 
-After trained the User and Item embeddings, assign all_embed.data in recommender_agent.py with:
+\textit{After trained the User and Item embeddings, assign all_embed.data in recommender_agent.py with:}
 ```
 $ all_embed.data = torch.from_numpy(*your_trained_embedding) 
 ```
