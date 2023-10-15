@@ -12,13 +12,12 @@ We provide an example: CliMF in the BaseRecRepo, for training the black-box reco
 The CliMF directly optimizes the Top-$K$ recommendation by modeling parameters through maximizing the Mean Reciprocal Rank (MRR).
 
 1. To train the CliMF model, you should firstly generate .bat train files by
-  ```sh
+   
    convert_file(train_file_path, CF.train_user_dict)
-  ```
-    ```sh
+
    convert_file(test_file_path, CF.test_user_dict)
-  ```
-2. Then manually add the file head to the two files as required in  Orange.data.Table(files) function with:
+
+3. Then manually add the file head to the two files as required in  Orange.data.Table(files) function with:
   ```sh
    user   item  relevance
    c  c  c
