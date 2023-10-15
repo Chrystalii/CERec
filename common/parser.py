@@ -2,7 +2,7 @@ import argparse
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="RUNING CEREC")
+    parser = argparse.ArgumentParser(description="Run KGPolicy2.")
 
     # ------------------------- BaseRec --------------------------------------------
     parser.add_argument("--num_iter", type=int, default=1, help="num_iter for Base Rec")
@@ -12,10 +12,10 @@ def parse_args():
 
     # -------------------------Data set --------------------------------------------
     parser.add_argument(
-        "--data_path", nargs="?", default="./Data/", help="Input data path."
+        "--data_path", nargs="?", default="../Data/", help="Input data path."
     )
     parser.add_argument(
-        "--dataset", nargs="?", default="last-fm", help="Choose a dataset."
+        "--dataset", nargs="?", default="yelp2018", help="Choose a dataset."
     )
     parser.add_argument("--emb_size", type=int, default=128, help="Embedding size.")
     parser.add_argument(
@@ -82,7 +82,7 @@ def parse_args():
         "--test_batch_size", type=int, default=1024, help="batch size for test"
     )
     parser.add_argument("--num_threads", type=int, default=4, help="number of threads.")
-    parser.add_argument("--epoch", type=int, default=400, help="Number of epoch.")
+    parser.add_argument("--epoch", type=int, default=150, help="Number of epoch.") #400 150 100: ablation
     parser.add_argument("--show_step", type=int, default=1, help="test step.")
     parser.add_argument(
         "--adj_epoch", type=int, default=1, help="build adj matrix per _ epoch"
@@ -116,5 +116,30 @@ def parse_args():
     parser.add_argument(
         "--Ks", nargs="?", default="[20, 40, 60, 80, 100]", help="evaluate K list"
     )
+
+    #-------------------------  Ablation Study ---------------------------------------------
+    #Graph Learning Module
+    parser.add_argument(
+        "--GCN", nargs="?", default="SAGE", help="GCN reprsentation learning operator, options are [SAGE, GCN, GNN, SG, LG, GAT, Trans]"
+    )
+
+    #Agent
+    parser.add_argument(
+        "--reward", nargs="?", default="all", help="reward function, options are [all, R-reward, S-reward]"
+    )
+
+    #Sampler: test attention score
+    parser.add_argument(
+        "--sampler", nargs="?", default="CPS", help="sampler, options are [CPS, 1-Uniform, 2-Uniform]"
+    )
+    parser.add_argument("--UniformSampler", type=bool, default=False, help="UniformSampler: True or False")
+    parser.add_argument("--RandomSampler", type=bool, default=False, help="UniformSampler: True or False")
+
+    #Recommendation Model
+    parser.add_argument(
+        "--recommender", nargs="?", default="MF", help="Recommenders, support [MF, BPR, NeuMF, KGAT]"
+    )
+
+
 
     return parser.parse_args()

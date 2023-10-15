@@ -91,7 +91,6 @@ def get_cfe_list(train_loader, adj_matrix, edge_matrix, counter_example_file):
     user_list = user_list.cpu().detach().numpy().tolist()
     cfe_item_list = cfe_item_list.cpu().detach().numpy().tolist()
     pos_item_list = pos_item_list.cpu().detach().numpy().tolist()
-    print(len(user_list),len(pos_item_list),len(cfe_item_list))
 
     user_cfe_items = {}
     user_pos_items = {}
@@ -207,7 +206,7 @@ def build_random(in_file, out_file,  entity_range_start, entity_range_end):
 if __name__ == '__main__':
     args_config = parse_args()
     args_config.epoch = 1
-    args_config.dataset='yelp2018'
+    args_config.dataset='last-fm'
     print('Working on dataset: ', args_config.dataset)
     CKG = CKGData(args_config)
     CF = CFData(args_config)
@@ -233,10 +232,10 @@ if __name__ == '__main__':
 
     print("\n--------loading state dict--------\n")
 
-    recommender.load_state_dict(torch.load("./weights/rec_yelp2018.ckpt"))
+    recommender.load_state_dict(torch.load("./weights/rec_last-fm_24_May.ckpt"))
     recommender.eval()
 
-    sampler.load_state_dict(torch.load("./weights/sampler_yelp2018.ckpt"))
+    sampler.load_state_dict(torch.load("./weights/sampler_last-fm_24-May.ckpt"))
     sampler.eval()
 
     for param in recommender.parameters():
@@ -246,8 +245,8 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     explain_path = './explanation'
-    counter_example_file = os.path.join(explain_path, 'counter_examples_{}.txt'.format(args_config.dataset))
-    counter_attributes_file = os.path.join(explain_path,'counter_attributes_{}.txt'.format(args_config.dataset))
+    counter_example_file = os.path.join(explain_path, 'examples_{}.txt'.format(args_config.dataset))
+    counter_attributes_file = os.path.join(explain_path,'attributes_{}.txt'.format(args_config.dataset))
 
     for epoch in range(args_config.epoch):
         if epoch % args_config.adj_epoch == 0:

@@ -29,8 +29,8 @@ def del_multichar(input_string, chars):
 
 
 def merge_two_dicts(x, y):
-    z = x.copy()  
-    z.update(y) 
+    z = x.copy()  # start with x's keys and values
+    z.update(y)  # modifies z with y's keys and values & returns None
     return z
 
 
@@ -71,4 +71,11 @@ def unfreeze(model):
 
 
 def print_dict(dic):
+    """print dictionary using specified format
+
+    example: {"a": 1, "b": 2}
+    output:
+            "a": 1
+            "b": 2
+    """
     print("\n".join("{:10s}: {}".format(key, values) for key, values in dic.items()))

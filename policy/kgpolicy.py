@@ -5,15 +5,49 @@ import torch.nn.functional as F
 import torch_geometric as geometric
 import networkx as nx
 from tqdm import tqdm
+import gc
 
 
 class GraphConv(nn.Module):
+    """
+    Graph Convolutional Network
+    Input: embedding matrix for knowledge graph entity and adjacency matrix
+    Output: gcn embedding for kg entity
+    """
+
     def __init__(self, in_channel, out_channel, config):
         super(GraphConv, self).__init__()
         self.config = config
 
-        self.conv1 = geometric.nn.SAGEConv(in_channel[0], out_channel[0])
-        self.conv2 = geometric.nn.SAGEConv(in_channel[1], out_channel[1])
+        print('Ablation on graph learning method, Using:', config.GCN)
+
+        if config.GCN == 'SAGE':
+            self.conv1 = geometric.nn.SAGEConv(in_channel[0], out_channel[0])
+            self.conv2 = geometric.nn.SAGEConv(in_channel[1], out_channel[1])
+        elif config.GCN == 'GCN':
+            self.conv1 = geometric.nn.GCNConv(in_channel[0], out_channel[0])
+            self.conv2 = geometric.nn.GCNConv(in_channel[1], out_channel[1])
+        elif config.GCN == 'GNN':
+            self.conv1 = geometric.nn.GraphConv(in_channel[0], out_channel[0])
+            self.conv2 = geometric.nn.GraphConv(in_channel[1], out_channel[1])
+        elif config.GCN == 'SG':
+            self.conv1 = geometric.nn.SGConv(in_channel[0], out_channel[0])
+            self.conv2 = geometric.nn.SGConv(in_channel[1], out_channel[1])
+        elif config.GCN == 'LG':
+            self.conv1 = geometric.nn.LGConv()
+            self.conv2 = geometric.nn.LGConv()
+        # elif config.GCN == 'MixHop':
+        #     self.conv1 = geometric.nn.dense.DenseGATConv(in_channel[0], out_channel[0])
+        #     self.conv2 = geometric.nn.dense.DenseGATConv(in_channel[1], out_channel[1])
+        elif config.GCN == 'GAT':
+            self.conv1 = geometric.nn.GATConv(in_channel[1], out_channel[1])
+            self.conv2 = geometric.nn.GATConv(in_channel[1], out_channel[1])
+        elif config.GCN == 'Trans':
+            self.conv1 = geometric.nn.TransformerConv(in_channel[1], out_channel[1])
+            self.conv2 = geometric.nn.TransformerConv(in_channel[1], out_channel[1])
+
+        else:
+            print('Unsupported Graph Learning Operator!')
 
     def forward(self, x, edge_indices):
         x = self.conv1(x, edge_indices)
@@ -28,11 +62,21 @@ class GraphConv(nn.Module):
 
 
 class KGPolicy(nn.Module):
+    """
+    Dynamical negative item sampler based on Knowledge graph
+    Input: user, postive item, knowledge graph embedding
+    Ouput: qualified negative item
+    """
+
     def __init__(self, dis, params, config):
         super(KGPolicy, self).__init__()
         self.params = params
         self.config = config
         self.dis = dis
+        self.batch_size = config.batch_size
+        self.emb_size =config.emb_size
+        self.UniformSampler=config.UniformSampler
+        self.RandomSampler = config.RandomSampler
 
         in_channel = eval(config.in_channel)
         out_channel = eval(config.out_channel)
@@ -46,6 +90,7 @@ class KGPolicy(nn.Module):
         )
 
     def _initialize_weight(self, n_entities, input_channel):
+        """entities includes items and other entities in knowledge graph"""
         if self.config.pretrain_s:
             kg_embedding = self.params["kg_embedding"]
             entity_embedding = nn.Parameter(kg_embedding)
@@ -73,25 +118,47 @@ class KGPolicy(nn.Module):
         assert k > 0
 
         for _ in range(k):
-            one_hop, one_hop_logits = self.kg_step(pos, users, adj_matrix, step=1)
+            """sample candidate negative items based on knowledge graph"""
+            torch.cuda.empty_cache()
+            if self.config.sampler == 'CPS':
+                one_hop, one_hop_logits = self.kg_step(pos, users, adj_matrix, step=1)
 
-            candidate_neg, two_hop_logits = self.kg_step(
-                one_hop, users, adj_matrix, step=2
-            )
+                torch.cuda.empty_cache()
+                candidate_neg, two_hop_logits = self.kg_step(
+                    one_hop, users, adj_matrix, step=2
+                )
+            elif self.config.sampler == '1-Uniform':
+                one_hop, one_hop_logits = self.Uniform_step(pos, users, adj_matrix, step=1)
+
+                torch.cuda.empty_cache()
+                candidate_neg, two_hop_logits = self.kg_step(
+                    one_hop, users, adj_matrix, step=2
+                )
+            elif self.config.sampler == '2-Uniform':
+                one_hop, one_hop_logits = self.kg_step(pos, users, adj_matrix, step=1)
+
+                torch.cuda.empty_cache()
+                candidate_neg, two_hop_logits = self.Uniform_step(
+                    one_hop, users, adj_matrix, step=2
+                )
+            else:
+                print("Unsupported Sampler!")
+
             candidate_neg = self.filter_entity(candidate_neg, self.item_range)
             good_neg, good_logits = self.prune_step(
                 self.dis, candidate_neg, users, two_hop_logits
             )
-            good_logits = good_logits + one_hop_logits
+            good_logits = good_logits.to('cuda') + one_hop_logits.to('cuda')
 
             neg_list = torch.cat([neg_list, good_neg.unsqueeze(0)])
-            prob_list = torch.cat([prob_list, good_logits.unsqueeze(0)])
+            prob_list = torch.cat([prob_list.to('cuda'), good_logits.to('cuda').unsqueeze(0)])
 
             pos = good_neg
 
         return neg_list, prob_list
 
     def build_edge(self, adj_matrix):
+        """build edges based on adj_matrix"""
         sample_edge = self.config.edge_threshold
         edge_matrix = adj_matrix
 
@@ -110,8 +177,10 @@ class KGPolicy(nn.Module):
         x = self.entity_embedding
         edges = self.edges
 
+        """knowledge graph embedding using gcn"""
         gcn_embedding = self.gcn(x, edges.t().contiguous())
 
+        """use knowledge embedding to decide candidate negative items"""
         u_e = gcn_embedding[user]
         u_e = u_e.unsqueeze(dim=2)
         pos_e = gcn_embedding[pos]
@@ -121,8 +190,40 @@ class KGPolicy(nn.Module):
         i_e = gcn_embedding[one_hop]
 
         p_entity = F.leaky_relu(pos_e * i_e)
-        p = torch.matmul(p_entity, u_e)
-        p = p.squeeze()
+
+        if self.UniformSampler:
+        	p = torch.empty(self.batch_size, self.emb_size)
+        	nn.init.xavier_uniform_(p)
+
+        else:
+
+            p = torch.matmul(p_entity, u_e)
+            p = p.squeeze()
+
+        logits = F.softmax(p, dim=1)
+
+        """sample negative items based on logits"""
+        batch_size = logits.size(0)
+        if step == 1:
+            nid = torch.argmax(logits, dim=1, keepdim=True)
+        else:
+            n = self.config.num_sample
+            _, indices = torch.sort(logits, descending=True)
+            nid = indices[:, :n]
+        row_id = torch.arange(batch_size, device=logits.device).unsqueeze(1)
+
+        candidate_neg = one_hop[row_id, nid].squeeze()
+        candidate_logits = torch.log(logits[row_id, nid]).squeeze()
+
+        return candidate_neg, candidate_logits
+
+    def Uniform_step(self, pos, user, adj_matrix, step):
+
+        one_hop = adj_matrix[pos]
+
+        p = torch.empty(self.batch_size, self.emb_size)
+        nn.init.uniform_(p)
+
         logits = F.softmax(p, dim=1)
 
         batch_size = logits.size(0)
@@ -139,11 +240,13 @@ class KGPolicy(nn.Module):
 
         return candidate_neg, candidate_logits
 
+
     @staticmethod
     def prune_step(dis, negs, users, logits):
         with torch.no_grad():
             ranking = dis.rank(users, negs)
 
+        """get most qualified negative item based on user-neg similarity"""
         indices = torch.argmax(ranking, dim=1)
 
         batch_size = negs.size(0)
@@ -151,7 +254,7 @@ class KGPolicy(nn.Module):
         indices = indices.unsqueeze(1)
 
         good_neg = negs[row_id, indices].squeeze()
-        goog_logits = logits[row_id, indices].squeeze()
+        goog_logits = logits[row_id.to('cpu'), indices.to('cpu')].squeeze()
 
         return good_neg, goog_logits
 

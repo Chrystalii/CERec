@@ -13,6 +13,8 @@ def get_score(model, n_users, n_items, train_user_dict, s, t):
     for u in range(s, t):
         pos = train_user_dict[u]
         idx = pos.index(-1) if -1 in pos else len(pos)
+        # print(pos[:idx])
+        # print(n_users)
         score_matrix[u-s][pos[:idx] - n_users] = -1e5
 
     return score_matrix

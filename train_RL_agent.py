@@ -1,6 +1,6 @@
 import os
 import random
-import Orange
+# import Orange
 import torch
 import numpy as np
 
@@ -16,21 +16,29 @@ from common import parse_args
 from buildData import CFData,CKGData
 from buildData.build import build_loader
 
-from policy import KGPolicy,Agent
+from policy import KGPolicy,MF, NeuMF, BPR, KGAT
 import sys
 from datetime import datetime
+import logging
 
-class Logger(object):
-    def __init__(self, fileN="Default.log"):
-        self.terminal = sys.stdout
-        self.log = open(fileN, "a")
 
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
+def setup_logger(log_file):
+    # Create a logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
 
-    def flush(self):
-        pass
+    # Create a file handler and set the log level
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)
+
+    # Create a formatter and add it to the file handler
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+
+    # Add the file handler to the logger
+    logger.addHandler(file_handler)
+
+    return logger
 
 def save_model(file_name, model, config):
     if not os.path.isdir(config.out_dir):
@@ -125,12 +133,16 @@ def train_one_epoch(
         selected_cfe_items_list, _ = sampler(batch_data, adj_matrix, edge_matrix)
         selected_cfe_items = selected_cfe_items_list[-1, :]
 
-        loss_batch = recommender(users, pos, selected_cfe_items)
+        if args_config.recommender == 'KGAT':
+            loss_batch = recommender(users, pos, selected_cfe_items, edge_matrix)
+        else:
+            loss_batch = recommender(users, pos, selected_cfe_items)
 
         loss_batch.backward()
         recommender_optim.step()
 
         """Train sampler network"""
+
         sampler_optim.zero_grad()
 
         selected_cfe_items_list, selected_cfe_prob_list = sampler(
@@ -138,7 +150,7 @@ def train_one_epoch(
         )
 
         with torch.no_grad():
-            reward_batch = recommender.get_reward(recommender, users, selected_cfe_items_list)
+            reward_batch = recommender.get_reward(recommender, users, selected_cfe_items_list )
 
         epoch_reward += torch.sum(reward_batch)
         reward_batch -= avg_reward
@@ -154,7 +166,9 @@ def train_one_epoch(
             reward[n-i] = R[n-i]
 
         reinforce_loss = -1 * torch.sum(reward_batch * selected_cfe_prob_list)
+
         reinforce_loss.backward()
+
         sampler_optim.step()
 
         """record loss in an epoch"""
@@ -162,15 +176,15 @@ def train_one_epoch(
 
     avg_reward = epoch_reward / num_batch
     train_res = PrettyTable()
-    train_res.field_names = ["Epoch", "Loss", "AVG-Reward"] 
+    train_res.field_names = ["Epoch", "Loss", "AVG-Reward"]  #BPR-loss, Reg-loss
     train_res.add_row(
-        [cur_epoch, loss.item(), avg_reward.item()] 
+        [cur_epoch, loss.item(), avg_reward.item()]   #reg_loss.item() base_loss.item()
     )
     print(train_res)
+    logger.info(f"Train result: {train_res}")
 
     return loss, avg_reward
 
-# def train(baseData, recModel, interactions, train_loader, test_loader, graph, data_config, args_config):
 def train(interactions, train_loader, test_loader, graph, data_config, args_config):
     """build padded training set"""
     train_mat = graph.train_user_dict
@@ -188,8 +202,21 @@ def train(interactions, train_loader, test_loader, graph, data_config, args_conf
         all_embed = torch.cat((paras["user_para"], paras["item_para"]))
         data_config["all_embed"] = all_embed
 
-    # recommender = Agent(baseData, recModel,data_config=data_config, args_config=args_config)
-    recommender = Agent(data_config=data_config, args_config=args_config)
+    if args_config.recommender =='NeuMF':
+        recommender = NeuMF(data_config=data_config, args_config=args_config)
+        logger.info("Recommender ablation: NeuMF")
+    elif args_config.recommender == 'MF':
+        recommender = MF(data_config=data_config, args_config=args_config)
+        logger.info("Recommender ablation: MF")
+    elif args_config.recommender == 'BPR':
+        recommender = BPR(data_config=data_config, args_config=args_config)
+        logger.info("Recommender ablation: BPR")
+    elif args_config.recommender == 'KGAT':
+        recommender = KGAT(data_config=data_config, args_config=args_config)
+        logger.info("Recommender ablation: KGAT")
+    else:
+        print('Unsupported Recommender!')
+
     sampler = KGPolicy(recommender, data_config, args_config)
 
     if torch.cuda.is_available():
@@ -198,7 +225,10 @@ def train(interactions, train_loader, test_loader, graph, data_config, args_conf
         recommender = recommender.cuda()
 
         print("\nSet sampler as: {}".format(str(sampler)))
+        logger.info(f"Set sampler as: {str(sampler)}")
+
         print("Set recommender as: {}\n".format(str(recommender)))
+        logger.info(f"Set recommender as: {str(recommender)}")
 
     recommender_optimer = torch.optim.Adam(recommender.parameters(), lr=args_config.rlr) #********
     sampler_optimer = torch.optim.Adam(sampler.parameters(), lr=args_config.slr)
@@ -241,6 +271,8 @@ def train(interactions, train_loader, test_loader, graph, data_config, args_conf
 
             print_dict(ret)
 
+            logger.info(f"result: {str(ret)}")
+
             cur_best_pre_0, stopping_step, should_stop = early_stopping(
                 ret["recall"][0],
                 cur_best_pre_0,
@@ -272,14 +304,13 @@ def train(interactions, train_loader, test_loader, graph, data_config, args_conf
         )
     )
     print(final_perf)
-
+    logger.info(f"Final result: {final_perf}")
 
 if __name__ == "__main__":
 
     # baseData = Orange.data.Table(
     #     'BaseRecRepo/processed_data/last-fm/train_RecBase.tab')
-    # recModel = torch.load('BaseRecRepo/save/recommender_model.pkl')
-
+    # recModel = torch.load('BaseRecRepo/save/recommender_model2772.pkl')
 
     """fix the random seed"""
     seed = 2020
@@ -291,8 +322,14 @@ if __name__ == "__main__":
     args_config = parse_args()
     print(args_config)
 
-    """"log the results"""
-    sys.stdout = Logger("./ablation_logs/{}_T_{}_{}.txt".format(args_config.dataset, args_config.k_step,datetime.now().strftime("%d_%b_%Y")))
+    #Recommender
+    logger = setup_logger("./ablation_logs/{}_Recommender_{}_{}.log".format(args_config.dataset,args_config.recommender,
+                                                                datetime.now().strftime("%d-%b-%Y")))
+    logger.info(f"Recommender: {args_config.recommender}")
+
+    logger.info(f"Working on: {args_config.dataset}")
+
+    logger.info(f"Args: {args_config}")
 
     CF = CFData(args_config)
     CKG = CKGData(args_config)
@@ -309,7 +346,6 @@ if __name__ == "__main__":
         "n_nodes": CKG.entity_range[1] + 1,
         "item_range": CKG.item_range,
     }
-    print(data_config)
 
     print("\ncopying CKG graph for data_loader.. it might take a few minutes")
     graph = deepcopy(CKG)
@@ -317,7 +353,6 @@ if __name__ == "__main__":
     train_loader, test_loader = build_loader(args_config=args_config, graph=graph)
 
     train(
-        # baseData, recModel,
         interactions=CF,
         train_loader=train_loader,
         test_loader=test_loader,
@@ -325,6 +360,5 @@ if __name__ == "__main__":
         data_config=data_config,
         args_config=args_config,
     )
-
 
 

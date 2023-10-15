@@ -3,6 +3,7 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 
+
 class CFData(object):
 
     def __init__(self, args_config):
@@ -23,15 +24,17 @@ class CFData(object):
 
         self.train_inter_matrix = self._generate_inteaction_matrix(self.train_user_dict, args_config.inter_threshold)
         self.test_inter_matrix = self._generate_inteaction_matrix(self.test_user_dict, args_config.inter_threshold)
+
+
     @staticmethod
     def _generate_interactions(
         file_name
-    ):  
+    ):
         inter_mat = list()
 
         lines = open(file_name, "r").readlines()
         for l in lines:
-            tmps = l.strip()  #去除该行首尾空格
+            tmps = l.strip()  
             inters = [int(i) for i in tmps.split(" ")]
 
             u_id, pos_ids = inters[0], inters[1:]
@@ -39,7 +42,6 @@ class CFData(object):
 
             for i_id in pos_ids:
                 inter_mat.append([u_id, i_id])
-
         return np.array(inter_mat)
 
     def _generate_user_dict(self):
@@ -92,10 +94,10 @@ class CFData(object):
         print("-        n_items: %d" % self.n_items)
         print("-" * 50)
 
-
+    #生成用户交互序列矩阵
     def _generate_inteaction_matrix(self, user_dict, inter_threshold):
 
-
+        #自限定一个阈值，防止上述得到序列过长（异常值），默认为32
         inter_matrix = np.zeros((self.n_users, inter_threshold))
         len = np.zeros(self.n_users)
 
@@ -136,7 +138,7 @@ class KGData(object):
             new_kg_np = org_kg_np.copy()
             # consider the number of users
             new_kg_np[:,0] = org_kg_np[:,
-                                     0] + self.entity_start_id 
+                                     0] + self.entity_start_id  #[:,0]就是取所有行的第0个数据
             new_kg_np[:, 2] = org_kg_np[:, 2] + self.entity_start_id
             # consider two additional relations --- 'interact' and 'be_interacted_with'.
             new_kg_np[:, 1] = org_kg_np[:, 1] + self.relation_start_id
@@ -152,7 +154,7 @@ class KGData(object):
             return kg, rd
 
         # get triplets with canonical direction like <item, has-aspect, entity>
-        can_kg_np = np.loadtxt(file_name, dtype=np.int32) 
+        can_kg_np = np.loadtxt(file_name, dtype=np.int32)  #import numpy as np
         can_kg_np = np.unique(can_kg_np, axis=0)
 
         # remap ids in kg. 加上user的id(避免userid与itemid重合)
@@ -211,12 +213,18 @@ class CKGData(CFData, KGData):
     def _combine_cf_kg(self):
         kg_mat = self.kg_data
         cf_mat = self.train_data
+
+        # combine cf data and kg data:
+        # ... ids of user entities in range of [0, #users)
+        # ... ids of item entities in range of [#users, #users + #items)
+        # ... ids of other entities in range of [#users + #items, #users + #entities)
+        # ... ids of relations in range of [0, 2 + 2 * #kg relations), including two 'interact' and 'interacted_by'.
         ckg_graph = nx.MultiDiGraph()
         print("Begin to load interaction triples ...")
         for u_id, i_id in tqdm(cf_mat, ascii=True):
             ckg_graph.add_edges_from(
                 [(u_id, i_id)], r_id=0
-            ) 
+            )
             ckg_graph.add_edges_from([(i_id, u_id)], r_id=1)
 
         print("\nBegin to load knowledge graph triples ...")

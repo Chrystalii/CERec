@@ -68,6 +68,9 @@ def train_base_rec(train_data_PATH, test_data_PATH,args):
         pickle.dump(learner, file)
 
 
+    # save_model(pkl_name, learner, args)
+    # torch.save(learner, pkl_name)
+
 if __name__ == '__main__':
 
     """initialize args and dataset"""
@@ -78,6 +81,10 @@ if __name__ == '__main__':
 
     train_file_path = os.path.join("processed_data",args_config.dataset,"train_RecBase.tab")
     test_file_path = os.path.join("processed_data",args_config.dataset ,"test_RecBase.tab")
+
+    # print("Converting files begin")
+    # convert_file(train_file_path,CF.train_user_dict)
+    # convert_file(test_file_path, CF.test_user_dict)
 
     print('Begin train the Black-Box Recommendation model.\n')
     train_base_rec(train_file_path, test_file_path,args_config)
