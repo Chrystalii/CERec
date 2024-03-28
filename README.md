@@ -1,3 +1,5 @@
+The code for TKDE 2024 paper "Reinforced path reasoning for counterfactual explainable recommendation"
+
 <!-- GETTING STARTED -->
 ## Getting Started
 
@@ -84,6 +86,13 @@ The output: .txt files of counterfactual_examples_{dataset}.txt; and counterfact
   ```
 
 ### Cite information:
-To be released after paper acceptance
+If you find our work useful, please cite the following work:
+@article{wang2024reinforced,
+  title={Reinforced path reasoning for counterfactual explainable recommendation},
+  author={Wang, Xiangmeng and Li, Qian and Yu, Dianer and Li, Qing and Xu, Guandong},
+  journal={IEEE Transactions on Knowledge and Data Engineering},
+  year={2024},
+  publisher={IEEE}
+}
 
 
